@@ -1,0 +1,29 @@
+{
+  "development": {
+    "username": "maxelephant",
+    "password": "AIv2hLqlofNhl0ZpeNILcg",
+    "database": "ghost",
+    "host": "ghost-db-2919.g95.cockroachlabs.cloud",
+    "dialect": "postgres",
+    "port": 26257,
+    "dialectOptions": {
+      "ssl": {
+        "rejectUnauthorized": false
+      }
+    }
+  },
+  "test": {
+    "username": "root",
+    "password": null,
+    "database": "database_test",
+    "host": "127.0.0.1",
+    "dialect": "postgres"
+  },
+  "production": {
+    "username": "root",
+    "password": null,
+    "database": "database_production",
+    "host": "127.0.0.1",
+    "dialect": "postgres"
+  }
+}
