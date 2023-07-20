@@ -26,11 +26,33 @@ function defineUser(sequelize) {
     avatar: {
       type: DataTypes.STRING,
       allowNull: true
+    },
+    verified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
+    ghostVerified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
+    organization: {
+      type: DataTypes.STRING,
+      allowNull: true
     }
   });
 
   User.associate = function (models) {
     User.hasMany(models.Haunt, { foreignKey: "userId" });
+    User.belongsToMany(User, {
+      as: "Followers",
+      through: "Follows",
+      foreignKey: "followeeId"
+    });
+    User.belongsToMany(User, {
+      as: "Following",
+      through: "Follows",
+      foreignKey: "followerId"
+    });
   };
 
   return User;

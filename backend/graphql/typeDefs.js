@@ -1,31 +1,40 @@
 const typeDefs = `
 type User {
-    id: String!
-    username: String!
-    displayName: String!
-    email: String!
-    avatar: String
-    bio: String
-    haunts: [Haunt]
-  }
+  id: String!
+  username: String!
+  displayName: String!
+  email: String!
+  avatar: String
+  bio: String
+  haunts: [Haunt]
+  isVerified: Boolean!
+  isGhostVerified: Boolean!
+  organization: String
+}
 
   type Haunt {
-    id: Int!
+    id: String!
     content: String!
     user: User!
+    createdAt: String!
   }
 
   type Query {
     users: [User]
-    haunts: [Haunt]
+    getAllHaunts: [Haunt]
     user(id: String!): User
     checkUsername(username: String!): Boolean!
     getUserByEmail(email: String!): User
-    haunt(id: Int!): Haunt
+    haunt(id: String!): Haunt
   }
 
   type Mutation {
     updateUserProfile(id: ID!, username: String!, displayName: String!, email: String!, bio: String, avatar: String): User!
+    createHaunt(userId: String!, content: String!): Haunt!
+  }
+
+  type Subscription {
+    hauntCreated: Haunt!
   }
 `;
 

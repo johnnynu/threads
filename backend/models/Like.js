@@ -13,8 +13,8 @@ function defineLike(sequelize) {
       },
       onDelete: "CASCADE"
     },
-    tweetId: {
-      type: DataTypes.INTEGER,
+    hauntId: {
+      type: DataTypes.STRING,
       allowNull: false,
       references: {
         model: "Haunts", // 'haunts' refers to table name not model name
@@ -27,7 +27,7 @@ function defineLike(sequelize) {
   // Define associations inside associate method
   Like.associate = (models) => {
     Like.belongsTo(models.User, { as: "user", foreignKey: "userId" });
-    Like.belongsTo(models.Haunt, { as: "haunt", foreignKey: "tweetId" }); // tweetId is the foreign key to Haunt
+    Like.belongsTo(models.Haunt, { as: "haunt", foreignKey: "hauntId" }); // tweetId is the foreign key to Haunt
   };
 
   return Like;

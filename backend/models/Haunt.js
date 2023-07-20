@@ -8,13 +8,12 @@ function defineHaunt(sequelize) {
     {
       // Model attributes are defined here
       id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
+        type: DataTypes.STRING,
         allowNull: false,
         primaryKey: true
       },
       content: {
-        type: DataTypes.STRING(1000),
+        type: DataTypes.STRING(280),
         allowNull: false
       },
       userId: {

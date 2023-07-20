@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -35,7 +35,6 @@ import {
 } from "react-icons/fa";
 import { BsPeopleFill } from "react-icons/bs";
 import { BiBadgeCheck } from "react-icons/bi";
-import { LuGhost } from "react-icons/lu";
 import { RiGhost2Line } from "react-icons/ri";
 import ForYou from "./ForYou";
 import Following from "./Following";
@@ -45,24 +44,64 @@ import { signOut } from "firebase/auth"; // import firebase auth signout
 import { auth } from "../firebase"; // import your auth instance
 import { FaEllipsisH } from "react-icons/fa"; // 3 dots icon
 
+import RightSidebar from "./RightSidebar"; // adjust the path according to your file structure
+
+import { useSubscription, useQuery, useMutation, gql } from "@apollo/client";
+
 const HomePage = () => {
   const [tab, setTab] = useState("for-you");
-  const [tweetText, setTweetText] = useState(""); // State for tweet input
+  const [hauntText, setHauntText] = useState(""); // State for tweet input
+  const [haunts, setHaunts] = useState([]); // State for storing haunts
 
   const navigate = useNavigate();
   const location = useLocation();
   const user = location.state?.user;
-  console.log("user", user);
+
+  const {
+    loading: queryLoading,
+    error: queryError,
+    data: queryData
+  } = useQuery(GET_ALL_HAUNTS);
+
+  console.log(queryData);
+
+  const [createHaunt] = useMutation(CREATE_HAUNT);
+
+  const { data: subscriptionData } = useSubscription(HAUNT_CREATED);
+
+  // Update haunts state when queryData is available
+  useEffect(() => {
+    if (queryData) {
+      setHaunts(queryData.getAllHaunts);
+    }
+  }, [queryData]);
+
+  useEffect(() => {
+    if (subscriptionData) {
+      const newHaunts = [subscriptionData.hauntCreated, ...haunts];
+      setHaunts(newHaunts);
+    }
+  }, [subscriptionData]);
+
+  useEffect(() => {
+    console.log("haunts after update:", haunts);
+  }, [haunts]);
+
+  // Handle the initial loading state
+  if (queryLoading) return <p>Loading...</p>;
+  if (queryError) {
+    console.log("queryError", queryError);
+    return <p>Error</p>;
+  }
 
   const handleTabChange = (newTab) => {
     setTab(newTab);
   };
 
   const handleSubmit = () => {
-    // Here you would typically send the tweet to your backend
-    console.log(tweetText);
+    createHaunt({ variables: { content: hauntText, userId: user.id } });
     // Clear the input field
-    setTweetText("");
+    setHauntText("");
   };
 
   const handleOptionSelect = (option) => {
@@ -218,8 +257,8 @@ const HomePage = () => {
         <Box width="full">
           <Textarea
             placeholder="What's happening?"
-            value={tweetText}
-            onChange={(e) => setTweetText(e.target.value)}
+            value={hauntText}
+            onChange={(e) => setHauntText(e.target.value)}
             size="sm"
             resize="none"
             maxLength={280}
@@ -248,7 +287,7 @@ const HomePage = () => {
             <Button
               leftIcon={<RiGhost2Line />}
               onClick={handleSubmit}
-              isDisabled={tweetText.length === 0}
+              isDisabled={hauntText.length === 0}
               colorScheme="purple"
             >
               Haunt
@@ -261,21 +300,71 @@ const HomePage = () => {
             alignItems="center"
             mt={2}
           >
-            <small>{280 - tweetText.length} characters left</small>
+            <small>{280 - hauntText.length} characters left</small>
           </Box>
         </Box>
         {/* Conditional rendering of tab contents */}
-        {tab === "for-you" && <ForYou />}
+        {tab === "for-you" && <ForYou haunts={haunts} />}
         {tab === "following" && <Following />}
       </VStack>
 
       {/* Right Sidebar */}
       {/* ... Add right sidebar with flex="1" */}
       <VStack align="start" spacing={5} flex="1">
-        {/* ... other links */}
+        <RightSidebar
+          trends={["Trend 1", "Trend 2", "Trend 3"]}
+          isLoading={true}
+        />
       </VStack>
     </Box>
   );
 };
+
+const CREATE_HAUNT = gql`
+  mutation CreateHaunt($content: String!, $userId: String!) {
+    createHaunt(content: $content, userId: $userId) {
+      id
+      content
+      user {
+        id
+        username
+        displayName
+        avatar
+      }
+    }
+  }
+`;
+
+const HAUNT_CREATED = gql`
+  subscription {
+    hauntCreated {
+      id
+      content
+      user {
+        id
+        username
+        displayName
+        avatar
+      }
+      createdAt
+    }
+  }
+`;
+
+const GET_ALL_HAUNTS = gql`
+  query getAllHaunts {
+    getAllHaunts {
+      id
+      content
+      user {
+        id
+        username
+        displayName
+        avatar
+      }
+      createdAt
+    }
+  }
+`;
 
 export default HomePage;

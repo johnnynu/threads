@@ -57,10 +57,15 @@ db.User.sync({ alter: true })
   .then(() => {
     return db.Like.sync({ alter: true });
   })
-  .then(() => {})
+  .then(() => {
+    return db.Haunt.sync({ alter: true });
+  })
   .catch((error) => {
     console.error("An error occurred while creating the tables:", error);
   });
+
+// use when you want to drop all tables and start fresh
+// seqInstance.sync({ force: true });
 
 db.seqInstance = seqInstance;
 db.Sequelize = Sequelize;

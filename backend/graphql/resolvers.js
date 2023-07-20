@@ -4,9 +4,21 @@ const {
   createUser,
   updateUserById
 } = require("../utility/users");
+const { createHaunt } = require("../utility/haunts");
 const { User, Haunt } = require("../models");
+const { PubSub } = require("graphql-subscriptions");
+const { v4: uuidv4 } = require("uuid");
+const pubsub = new PubSub();
+
+const HAUNT_CREATED = "HAUNT_CREATED";
 
 const resolvers = {
+  Subscription: {
+    hauntCreated: {
+      subscribe: () => pubsub.asyncIterator(["HAUNT_CREATED"]),
+      resolve: (payload) => payload.hauntCreated
+    }
+  },
   Mutation: {
     updateUserProfile: async (
       _,
@@ -43,11 +55,35 @@ const resolvers = {
         console.log("User updated:", user);
       }
       return user;
+    },
+    createHaunt: async (_, { userId, content }) => {
+      const user = await findUserById(userId);
+      if (!user) {
+        throw new Error("No user found with this ID");
+      }
+      if ((user.isVerified || user.isGhostVerified) && content.length > 25000) {
+        throw new Error("Content too long");
+      }
+      if (!user.isVerified && !user.isGhostVerified && content.length > 280) {
+        throw new Error("Content too long");
+      }
+      const id = uuidv4();
+      const haunt = await createHaunt({
+        id,
+        userId,
+        content
+      });
+
+      haunt.user = user;
+
+      pubsub.publish(HAUNT_CREATED, { hauntCreated: haunt });
+
+      return haunt;
     }
   },
   Query: {
     users: () => User.findAll(),
-    haunts: () => Haunt.findAll(),
+    getAllHaunts: () => Haunt.findAll({ order: [["createdAt", "DESC"]] }),
     user: (_, { id }) => User.findByPk(id),
     checkUsername: async (_, { username }) => {
       const user = findUserByUsername(username);
