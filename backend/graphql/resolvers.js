@@ -79,6 +79,22 @@ const resolvers = {
       pubsub.publish(HAUNT_CREATED, { hauntCreated: haunt });
 
       return haunt;
+    },
+    editHaunt: async (_, { id, content }, context) => {
+      const haunt = await Haunt.findByPk(id);
+      console.log("Context in resolver", context);
+      if (!haunt) {
+        throw new Error("No haunt found with this ID");
+      }
+      if (content.length > 280) {
+        throw new Error("Content too long");
+      }
+      if (haunt.userId.toString() !== context.userId) {
+        throw new Error("User not authorized");
+      }
+      haunt.content = content;
+      await haunt.save();
+      return haunt;
     }
   },
   Query: {

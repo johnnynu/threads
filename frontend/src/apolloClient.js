@@ -7,16 +7,40 @@ import {
 } from "@apollo/client";
 import { getMainDefinition } from "@apollo/client/utilities";
 import { onError } from "@apollo/client/link/error";
+import { setContext } from "@apollo/client/link/context";
 import { GraphQLWsLink } from "@apollo/client/link/subscriptions";
 import { createClient } from "graphql-ws";
+import { getAuth } from "firebase/auth";
 
 const httpLink = new HttpLink({
   uri: "http://localhost:4000/graphql"
 });
 
+const authLink = setContext(async (_, { headers }) => {
+  const auth = getAuth();
+  const user = auth.currentUser;
+  const token = user ? await user.getIdToken(true) : null;
+
+  return {
+    headers: {
+      ...headers,
+      authorization: token ? `Bearer ${token}` : ""
+    }
+  };
+});
+
 const wsLink = new GraphQLWsLink(
   createClient({
-    url: "ws://localhost:4000/subscriptions"
+    url: "ws://localhost:4000/subscriptions",
+    connectionParams: async () => {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      const token = user ? await user.getIdToken(true) : null;
+      console.log("Connection Params:", token);
+      return {
+        authToken: token
+      };
+    }
   })
 );
 
@@ -42,8 +66,8 @@ const link = split(
       definition.operation === "subscription"
     );
   },
-  wsLink,
-  httpLink
+  wsLink, // Use wsLink for subscriptions
+  authLink.concat(httpLink) // Use authLink.concat(httpLink) for other operations
 );
 
 const client = new ApolloClient({

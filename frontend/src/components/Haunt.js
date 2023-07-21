@@ -5,19 +5,38 @@ import {
   VStack,
   HStack,
   IconButton,
-  Flex
+  Flex,
+  Button,
+  Input
 } from "@chakra-ui/react";
 import {
   ChatIcon,
   RepeatIcon,
   StarIcon,
-  AttachmentIcon
+  AttachmentIcon,
+  EditIcon,
+  CheckIcon,
+  CloseIcon
 } from "@chakra-ui/icons";
 import { formatDistanceToNow } from "date-fns";
+import { useState } from "react";
+import { useMutation, gql } from "@apollo/client";
 
-function Haunt({ haunt }) {
+function Haunt({ haunt, currentUserId }) {
   const createdAtDate = new Date(Number(haunt.createdAt));
   const timeDifference = formatDistanceToNow(createdAtDate);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [newContent, setNewContent] = useState(haunt.content);
+
+  const [editHaunt] = useMutation(EDIT_HAUNT, {
+    refetchQueries: [{ query: GET_ALL_HAUNTS }]
+  });
+
+  const handleEdit = () => {
+    editHaunt({ variables: { id: haunt.id, content: newContent } });
+    setIsEditing(false);
+  };
 
   return (
     <Flex
@@ -38,8 +57,22 @@ function Haunt({ haunt }) {
             <Text color="gray.500">·</Text>
             <Text color="gray.500">{timeDifference} ago</Text>
           </HStack>
+          {haunt.user.id === currentUserId && (
+            <IconButton
+              aria-label="Edit"
+              icon={isEditing ? <CheckIcon /> : <EditIcon />}
+              onClick={isEditing ? handleEdit : () => setIsEditing(true)}
+            />
+          )}
         </Flex>
-        <Text>{haunt.content}</Text>
+        {isEditing ? (
+          <Input
+            value={newContent}
+            onChange={(e) => setNewContent(e.target.value)}
+          />
+        ) : (
+          <Text>{haunt.content}</Text>
+        )}
         <HStack spacing={4}>
           <IconButton
             aria-label="Reply"
@@ -70,5 +103,30 @@ function Haunt({ haunt }) {
     </Flex>
   );
 }
+
+const EDIT_HAUNT = gql`
+  mutation EditHaunt($id: String!, $content: String!) {
+    editHaunt(id: $id, content: $content) {
+      id
+      content
+    }
+  }
+`;
+
+const GET_ALL_HAUNTS = gql`
+  query getAllHaunts {
+    getAllHaunts {
+      id
+      content
+      user {
+        id
+        username
+        displayName
+        avatar
+      }
+      createdAt
+    }
+  }
+`;
 
 export default Haunt;

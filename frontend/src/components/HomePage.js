@@ -63,7 +63,7 @@ const HomePage = () => {
     data: queryData
   } = useQuery(GET_ALL_HAUNTS);
 
-  console.log(queryData);
+  console.log("user", user);
 
   const [createHaunt] = useMutation(CREATE_HAUNT);
 
@@ -304,7 +304,9 @@ const HomePage = () => {
           </Box>
         </Box>
         {/* Conditional rendering of tab contents */}
-        {tab === "for-you" && <ForYou haunts={haunts} />}
+        {tab === "for-you" && (
+          <ForYou haunts={haunts} currentUserId={user.id} />
+        )}
         {tab === "following" && <Following />}
       </VStack>
 

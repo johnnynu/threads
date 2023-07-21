@@ -31,6 +31,8 @@ type User {
   type Mutation {
     updateUserProfile(id: ID!, username: String!, displayName: String!, email: String!, bio: String, avatar: String): User!
     createHaunt(userId: String!, content: String!): Haunt!
+    editHaunt(id: String!, content: String!): Haunt
+    deleteHaunt(id: String!): Boolean!
   }
 
   type Subscription {
