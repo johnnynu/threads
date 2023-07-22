@@ -16,27 +16,46 @@ import {
   AttachmentIcon,
   EditIcon,
   CheckIcon,
-  CloseIcon
+  DeleteIcon
 } from "@chakra-ui/icons";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, set } from "date-fns";
 import { useState } from "react";
 import { useMutation, gql } from "@apollo/client";
 
-function Haunt({ haunt, currentUserId }) {
+function Haunt({ haunt, currentUserId, createLoading, disableDelete }) {
   const createdAtDate = new Date(Number(haunt.createdAt));
   const timeDifference = formatDistanceToNow(createdAtDate);
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isDeleted, setIsDeleted] = useState(false);
   const [newContent, setNewContent] = useState(haunt.content);
 
   const [editHaunt] = useMutation(EDIT_HAUNT, {
     refetchQueries: [{ query: GET_ALL_HAUNTS }]
   });
 
+  const [deleteHaunt] = useMutation(DELETE_HAUNT, {
+    refetchQueries: [{ query: GET_ALL_HAUNTS }],
+    awaitRefetchQueries: true,
+    onCompleted: () => {
+      setIsDeleted(false);
+    },
+    onError: () => {
+      setIsDeleted(false);
+    }
+  });
+
   const handleEdit = () => {
     editHaunt({ variables: { id: haunt.id, content: newContent } });
     setIsEditing(false);
   };
+
+  const handleDelete = () => {
+    setIsDeleted(true);
+    deleteHaunt({ variables: { id: haunt.id } });
+  };
+
+  console.log("In Haunt:", createLoading);
 
   return (
     <Flex
@@ -58,11 +77,19 @@ function Haunt({ haunt, currentUserId }) {
             <Text color="gray.500">{timeDifference} ago</Text>
           </HStack>
           {haunt.user.id === currentUserId && (
-            <IconButton
-              aria-label="Edit"
-              icon={isEditing ? <CheckIcon /> : <EditIcon />}
-              onClick={isEditing ? handleEdit : () => setIsEditing(true)}
-            />
+            <HStack>
+              <IconButton
+                aria-label="Edit"
+                icon={isEditing ? <CheckIcon /> : <EditIcon />}
+                onClick={isEditing ? handleEdit : () => setIsEditing(true)}
+              />
+              <IconButton
+                aria-label="Delete"
+                icon={<DeleteIcon />}
+                onClick={handleDelete}
+                isDisabled={createLoading || isDeleted || disableDelete} // disable the button while deleting
+              />
+            </HStack>
           )}
         </Flex>
         {isEditing ? (
@@ -126,6 +153,12 @@ const GET_ALL_HAUNTS = gql`
       }
       createdAt
     }
+  }
+`;
+
+const DELETE_HAUNT = gql`
+  mutation deleteHaunt($id: String!) {
+    deleteHaunt(id: $id)
   }
 `;
 

@@ -20,7 +20,6 @@ import {
   MenuItem
 } from "@chakra-ui/react";
 import {
-  FaFeather,
   FaRegImage,
   FaRegSmile,
   FaPollH,
@@ -52,6 +51,8 @@ const HomePage = () => {
   const [tab, setTab] = useState("for-you");
   const [hauntText, setHauntText] = useState(""); // State for tweet input
   const [haunts, setHaunts] = useState([]); // State for storing haunts
+  const [isRenderingHaunt, setIsRenderingHaunt] = useState(false);
+  const [disableDelete, setDisableDelete] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -63,11 +64,14 @@ const HomePage = () => {
     data: queryData
   } = useQuery(GET_ALL_HAUNTS);
 
-  console.log("user", user);
-
-  const [createHaunt] = useMutation(CREATE_HAUNT);
+  const [createHaunt, { loading: createLoading }] = useMutation(CREATE_HAUNT, {
+    onCompleted: () => {
+      setIsRenderingHaunt(false);
+    }
+  });
 
   const { data: subscriptionData } = useSubscription(HAUNT_CREATED);
+  const { data: deletedSubscriptionData } = useSubscription(HAUNT_DELETED);
 
   // Update haunts state when queryData is available
   useEffect(() => {
@@ -76,6 +80,7 @@ const HomePage = () => {
     }
   }, [queryData]);
 
+  // Update haunts when a new haunt is created
   useEffect(() => {
     if (subscriptionData) {
       const newHaunts = [subscriptionData.hauntCreated, ...haunts];
@@ -83,9 +88,15 @@ const HomePage = () => {
     }
   }, [subscriptionData]);
 
+  // Update haunts state when a haunt is deleted
   useEffect(() => {
-    console.log("haunts after update:", haunts);
-  }, [haunts]);
+    if (deletedSubscriptionData) {
+      const updatedHaunts = haunts.filter(
+        (haunt) => haunt.id !== deletedSubscriptionData.hauntDeleted
+      );
+      setHaunts(updatedHaunts);
+    }
+  }, [deletedSubscriptionData]);
 
   // Handle the initial loading state
   if (queryLoading) return <p>Loading...</p>;
@@ -99,13 +110,14 @@ const HomePage = () => {
   };
 
   const handleSubmit = () => {
+    setIsRenderingHaunt(true);
     createHaunt({ variables: { content: hauntText, userId: user.id } });
-    // Clear the input field
     setHauntText("");
+    setDisableDelete(true);
+    setTimeout(() => setDisableDelete(false), 3000); // disable delete for 3 seconds
   };
 
   const handleOptionSelect = (option) => {
-    // Here you would typically open a modal or perform another action relevant to the selected option
     console.log(option);
   };
 
@@ -144,7 +156,6 @@ const HomePage = () => {
       <Flex alignItems="center" justifyContent="flex-start">
         <Box width="20px">{icon}</Box>
         <Box ml={2}>{children}</Box>{" "}
-        {/* This Box contains the label and has left margin */}
       </Flex>
     </Button>
   );
@@ -305,7 +316,12 @@ const HomePage = () => {
         </Box>
         {/* Conditional rendering of tab contents */}
         {tab === "for-you" && (
-          <ForYou haunts={haunts} currentUserId={user.id} />
+          <ForYou
+            haunts={haunts}
+            currentUserId={user.id}
+            createLoading={createLoading || isRenderingHaunt}
+            disableDelete={disableDelete}
+          />
         )}
         {tab === "following" && <Following />}
       </VStack>
@@ -350,6 +366,12 @@ const HAUNT_CREATED = gql`
       }
       createdAt
     }
+  }
+`;
+
+const HAUNT_DELETED = gql`
+  subscription {
+    hauntDeleted
   }
 `;
 

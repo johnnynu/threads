@@ -37,6 +37,7 @@ type User {
 
   type Subscription {
     hauntCreated: Haunt!
+    hauntDeleted: ID!
   }
 `;
 

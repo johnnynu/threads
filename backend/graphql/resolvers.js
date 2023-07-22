@@ -4,19 +4,24 @@ const {
   createUser,
   updateUserById
 } = require("../utility/users");
-const { createHaunt } = require("../utility/haunts");
+const { createHaunt, deleteHauntById } = require("../utility/haunts");
 const { User, Haunt } = require("../models");
 const { PubSub } = require("graphql-subscriptions");
 const { v4: uuidv4 } = require("uuid");
 const pubsub = new PubSub();
 
 const HAUNT_CREATED = "HAUNT_CREATED";
+const HAUNT_DELETED = "HAUNT_DELETED";
 
 const resolvers = {
   Subscription: {
     hauntCreated: {
       subscribe: () => pubsub.asyncIterator(["HAUNT_CREATED"]),
       resolve: (payload) => payload.hauntCreated
+    },
+    hauntDeleted: {
+      subscribe: () => pubsub.asyncIterator(["HAUNT_DELETED"]),
+      resolve: (payload) => payload.hauntDeleted
     }
   },
   Mutation: {
@@ -95,6 +100,18 @@ const resolvers = {
       haunt.content = content;
       await haunt.save();
       return haunt;
+    },
+    deleteHaunt: async (_, { id }, context) => {
+      const haunt = await Haunt.findByPk(id);
+      console.log("haunt id", id);
+      if (!haunt) {
+        throw new Error("No haunt found with this ID");
+      }
+      if (haunt.userId.toString() !== context.userId) {
+        throw new Error("User not authorized");
+      }
+      pubsub.publish(HAUNT_DELETED, { hauntDeleted: id });
+      return deleteHauntById(id);
     }
   },
   Query: {
