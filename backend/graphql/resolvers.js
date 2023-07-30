@@ -5,13 +5,15 @@ const {
   updateUserById
 } = require("../utility/users");
 const { createHaunt, deleteHauntById } = require("../utility/haunts");
-const { User, Haunt } = require("../models");
+const { User, Haunt, Like } = require("../models");
 const { PubSub } = require("graphql-subscriptions");
 const { v4: uuidv4 } = require("uuid");
 const pubsub = new PubSub();
 
 const HAUNT_CREATED = "HAUNT_CREATED";
 const HAUNT_DELETED = "HAUNT_DELETED";
+const LIKE_CREATED = "LIKE_CREATED";
+const LIKE_DELETED = "LIKE_DELETED";
 
 const resolvers = {
   Subscription: {
@@ -22,6 +24,14 @@ const resolvers = {
     hauntDeleted: {
       subscribe: () => pubsub.asyncIterator(["HAUNT_DELETED"]),
       resolve: (payload) => payload.hauntDeleted
+    },
+    likeCreated: {
+      subscribe: () => pubsub.asyncIterator(["LIKE_CREATED"]),
+      resolve: (payload) => payload.likeCreated
+    },
+    likeDeleted: {
+      subscribe: () => pubsub.asyncIterator(["LIKE_DELETED"]),
+      resolve: (payload) => payload.likeDeleted
     }
   },
   Mutation: {
@@ -112,6 +122,37 @@ const resolvers = {
       }
       pubsub.publish(HAUNT_DELETED, { hauntDeleted: id });
       return deleteHauntById(id);
+    },
+    createLike: async (_, { hauntId }, context) => {
+      const haunt = await Haunt.findByPk(hauntId);
+      if (!haunt) {
+        throw new Error("No haunt found with this ID");
+      }
+      const like = await Like.create({
+        userId: context.userId,
+        hauntId: hauntId
+      });
+      const likeCount = await Like.count({ where: { hauntId } });
+      pubsub.publish(LIKE_CREATED, {
+        likeCreated: { hauntId, likeId: like.id, likeCount }
+      });
+
+      return like;
+    },
+    deleteLike: async (_, { id }, context) => {
+      const like = await Like.findOne({
+        where: { id: id, userId: context.userId }
+      });
+
+      if (!like) {
+        throw new Error("Like not found or you're not the owner");
+      }
+      await like.destroy();
+      const likeCount = await Like.count({ where: { hauntId: like.hauntId } });
+      pubsub.publish(LIKE_DELETED, {
+        likeDeleted: { hauntId: like.hauntId, likeId: like.id, likeCount }
+      });
+      return true;
     }
   },
   Query: {
@@ -137,7 +178,10 @@ const resolvers = {
   },
 
   Haunt: {
-    user: (haunt) => User.findByPk(haunt.userId)
+    user: (haunt) => User.findByPk(haunt.userId),
+    likes: async (haunt) => {
+      return await Like.findAll({ where: { hauntId: haunt.id } });
+    }
   }
 };
 

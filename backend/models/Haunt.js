@@ -35,6 +35,7 @@ function defineHaunt(sequelize) {
   // If you query a Haunt from the DB, it will include the associated User under the key 'user'.
   Haunt.associate = (models) => {
     Haunt.belongsTo(models.User, { as: "user", foreignKey: "userId" });
+    Haunt.hasMany(models.Like, { as: "likes", foreignKey: "hauntId" }); // Add this line
   };
 
   return Haunt;

@@ -21,7 +21,6 @@ function RightSidebar({ trends, isLoading }) {
         placeholder="Search Ghost"
         marginBottom="20px"
         borderRadius="full"
-        bg="gray.100"
         _placeholder={{ color: "gray.500" }}
       />
       <Heading as="h2" size="md" marginBottom="10px">

@@ -1,24 +1,39 @@
 const typeDefs = `
-type User {
-  id: String!
-  username: String!
-  displayName: String!
-  email: String!
-  avatar: String
-  bio: String
-  haunts: [Haunt]
-  isVerified: Boolean!
-  isGhostVerified: Boolean!
-  organization: String
-}
+  type User {
+    id: String!
+    username: String!
+    displayName: String!
+    email: String!
+    avatar: String
+    bio: String
+    haunts: [Haunt]
+    isVerified: Boolean!
+    isGhostVerified: Boolean!
+    organization: String
+  }
 
   type Haunt {
     id: String!
     content: String!
     user: User!
     createdAt: String!
+    likes: [Like]!
   }
 
+  type Like {
+    id: String!
+    userId: String!
+    hauntId: String!
+    user: User!
+    haunt: Haunt!
+  }
+
+  type LikeUpdate {
+    hauntId: String!
+    likeId: String!
+    likeCount: Int!
+  }
+  
   type Query {
     users: [User]
     getAllHaunts: [Haunt]
@@ -33,11 +48,15 @@ type User {
     createHaunt(userId: String!, content: String!): Haunt!
     editHaunt(id: String!, content: String!): Haunt
     deleteHaunt(id: String!): Boolean!
+    createLike(hauntId: String!): Like!
+    deleteLike(id: String!): Boolean!
   }
 
   type Subscription {
     hauntCreated: Haunt!
     hauntDeleted: ID!
+    likeCreated: LikeUpdate!
+    likeDeleted: LikeUpdate!
   }
 `;
 

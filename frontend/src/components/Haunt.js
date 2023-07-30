@@ -19,16 +19,34 @@ import {
   DeleteIcon
 } from "@chakra-ui/icons";
 import { formatDistanceToNow, set } from "date-fns";
-import { useState } from "react";
-import { useMutation, gql } from "@apollo/client";
+import { useState, useEffect } from "react";
+import { useMutation, useSubscription, gql } from "@apollo/client";
 
-function Haunt({ haunt, currentUserId, createLoading, disableDelete }) {
+function Haunt({
+  haunt,
+  hauntLikes,
+  currentUserId,
+  createLoading,
+  disableDelete
+}) {
   const createdAtDate = new Date(Number(haunt.createdAt));
   const timeDifference = formatDistanceToNow(createdAtDate);
 
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
   const [newContent, setNewContent] = useState(haunt.content);
+  const [userHasLiked, setUserHasLiked] = useState(false);
+
+  const [likes, setLikes] = useState(hauntLikes || []);
+
+  useEffect(() => {
+    console.log("likes:", likes);
+  }, [likes]);
+
+  useEffect(() => {
+    const existingLike = likes.find((like) => like.userId === currentUserId);
+    setUserHasLiked(!!existingLike);
+  }, [likes, currentUserId]);
 
   const [editHaunt] = useMutation(EDIT_HAUNT, {
     refetchQueries: [{ query: GET_ALL_HAUNTS }]
@@ -45,6 +63,30 @@ function Haunt({ haunt, currentUserId, createLoading, disableDelete }) {
     }
   });
 
+  const [createLike] = useMutation(CREATE_LIKE);
+  const [deleteLike] = useMutation(DELETE_LIKE);
+
+  useSubscription(LIKE_CREATED, {
+    onSubscriptionData: ({ subscriptionData }) => {
+      const { hauntId, likeId } = subscriptionData.data.likeCreated;
+      if (hauntId === haunt.id) {
+        setLikes((prevLikes) => [
+          ...prevLikes,
+          { id: likeId, userId: currentUserId }
+        ]);
+      }
+    }
+  });
+
+  useSubscription(LIKE_DELETED, {
+    onSubscriptionData: ({ subscriptionData }) => {
+      const { hauntId, likeId } = subscriptionData.data.likeDeleted;
+      if (hauntId === haunt.id) {
+        setLikes((prevLikes) => prevLikes.filter((like) => like.id !== likeId));
+      }
+    }
+  });
+
   const handleEdit = () => {
     editHaunt({ variables: { id: haunt.id, content: newContent } });
     setIsEditing(false);
@@ -55,7 +97,23 @@ function Haunt({ haunt, currentUserId, createLoading, disableDelete }) {
     deleteHaunt({ variables: { id: haunt.id } });
   };
 
-  console.log("In Haunt:", createLoading);
+  const handleLike = async () => {
+    if (!currentUserId) {
+      // User is not logged in
+      alert("You must be logged in to like a haunt!");
+      return;
+    }
+
+    const existingLike = likes.find((like) => like.userId === currentUserId);
+
+    if (existingLike) {
+      // User has already liked this haunt, so we'll unlike it
+      await deleteLike({ variables: { id: existingLike.id } });
+    } else {
+      // User has not liked this haunt yet, so we'll like it
+      await createLike({ variables: { hauntId: haunt.id } });
+    }
+  };
 
   return (
     <Flex
@@ -65,7 +123,7 @@ function Haunt({ haunt, currentUserId, createLoading, disableDelete }) {
       borderWidth="1px"
       borderRadius="lg"
       marginBottom="20px"
-      bg="white"
+      bg="black"
     >
       <Avatar src={haunt.user.avatar} />
       <VStack align="start" spacing={1} ml={4} w="full">
@@ -82,12 +140,16 @@ function Haunt({ haunt, currentUserId, createLoading, disableDelete }) {
                 aria-label="Edit"
                 icon={isEditing ? <CheckIcon /> : <EditIcon />}
                 onClick={isEditing ? handleEdit : () => setIsEditing(true)}
+                background="black"
+                color="white"
               />
               <IconButton
                 aria-label="Delete"
                 icon={<DeleteIcon />}
                 onClick={handleDelete}
                 isDisabled={createLoading || isDeleted || disableDelete} // disable the button while deleting
+                background="black"
+                color="white"
               />
             </HStack>
           )}
@@ -106,24 +168,33 @@ function Haunt({ haunt, currentUserId, createLoading, disableDelete }) {
             icon={<ChatIcon />}
             variant="outline"
             size="sm"
+            color="white"
           />
           <IconButton
             aria-label="Retweet"
             icon={<RepeatIcon />}
             variant="outline"
             size="sm"
+            color="white"
           />
-          <IconButton
-            aria-label="Like"
-            icon={<StarIcon />}
-            variant="outline"
-            size="sm"
-          />
+          <HStack spacing={1}>
+            <IconButton
+              aria-label="Like"
+              icon={<StarIcon />}
+              variant={userHasLiked ? "solid" : "outline"}
+              colorScheme={userHasLiked ? "purple" : "white"}
+              size="sm"
+              onClick={handleLike}
+            />
+            <Text>{likes ? likes.length : 0}</Text>
+          </HStack>
+
           <IconButton
             aria-label="Share"
             icon={<AttachmentIcon />}
             variant="outline"
             size="sm"
+            color="white"
           />
         </HStack>
       </VStack>
@@ -159,6 +230,40 @@ const GET_ALL_HAUNTS = gql`
 const DELETE_HAUNT = gql`
   mutation deleteHaunt($id: String!) {
     deleteHaunt(id: $id)
+  }
+`;
+
+const LIKE_CREATED = gql`
+  subscription {
+    likeCreated {
+      hauntId
+      likeId
+      likeCount
+    }
+  }
+`;
+
+const LIKE_DELETED = gql`
+  subscription {
+    likeDeleted {
+      hauntId
+      likeId
+      likeCount
+    }
+  }
+`;
+
+const CREATE_LIKE = gql`
+  mutation CreateLike($hauntId: String!) {
+    createLike(hauntId: $hauntId) {
+      id
+    }
+  }
+`;
+
+const DELETE_LIKE = gql`
+  mutation DeleteLike($id: String!) {
+    deleteLike(id: $id)
   }
 `;
 

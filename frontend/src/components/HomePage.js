@@ -129,11 +129,11 @@ const HomePage = () => {
   const MainFeedTab = ({ children, tabName }) => (
     <Box
       borderBottom={tab === tabName ? "2px solid" : "none"}
-      borderBottomColor="black.500"
+      borderBottomColor="white" // Changed to white
       py={2}
       cursor="pointer"
       onClick={() => handleTabChange(tabName)}
-      color={tab === tabName ? "black.500" : "gray.500"}
+      color={tab === tabName ? "white" : "gray.400"} // Adjusted color for visibility
       fontWeight={tab === tabName ? "bold" : "normal"}
       flex="1"
       display="flex"
@@ -150,18 +150,24 @@ const HomePage = () => {
       variant="ghost"
       onClick={() => handleTabChange(tabName)}
       borderRadius="full"
-      _hover={{ bg: "gray.100" }}
+      _hover={{ bg: "gray.700" }} // Changed hover background for better visibility
       my={1}
+      color="white"
     >
-      <Flex alignItems="center" justifyContent="flex-start">
-        <Box width="20px">{icon}</Box>
-        <Box ml={2}>{children}</Box>{" "}
+      <Flex alignItems="center" justifyContent="flex-start" color="white">
+        {" "}
+        <Box width="20px" color="white">
+          {icon}
+        </Box>{" "}
+        <Box ml={2} color="white">
+          {children}
+        </Box>{" "}
       </Flex>
     </Button>
   );
 
   return (
-    <Box display="flex" p={5} alignItems="flex-start">
+    <Box display="flex" p={5} alignItems="flex-start" color="white">
       {/* Left Sidebar */}
       <VStack align="center" flex="0.6" ml={150}>
         {" "}
@@ -236,9 +242,12 @@ const HomePage = () => {
                 icon={<FaEllipsisH />}
                 size="xs"
                 variant="outline"
+                color="white"
               />
-              <MenuList>
-                <MenuItem onClick={handleSignOut}>Sign out</MenuItem>
+              <MenuList colorScheme="purple">
+                <MenuItem color="black" onClick={handleSignOut}>
+                  Sign out
+                </MenuItem>
               </MenuList>
             </Menu>
           </Flex>
@@ -252,11 +261,13 @@ const HomePage = () => {
         flex="1.4"
         borderLeft="1px"
         borderRight="1px"
-        borderColor="gray.200"
+        borderColor="gray.400"
         pl={5}
         pr={5}
       >
-        <Heading size="md">Home</Heading>
+        <Heading size="md" color="white">
+          Home
+        </Heading>
 
         {/* Tab Buttons */}
         <Box display="flex" justifyContent="space-between" width="full">
@@ -273,6 +284,7 @@ const HomePage = () => {
             size="sm"
             resize="none"
             maxLength={280}
+            color="white"
           />
 
           {/* Tweet options */}
@@ -280,18 +292,14 @@ const HomePage = () => {
             <IconButton
               icon={<FaRegImage />}
               onClick={() => handleOptionSelect("image")}
+              background="black"
+              color="white"
             />
             <IconButton
               icon={<FaRegSmile />}
               onClick={() => handleOptionSelect("emoji")}
-            />
-            <IconButton
-              icon={<FaPollH />}
-              onClick={() => handleOptionSelect("poll")}
-            />
-            <IconButton
-              icon={<FaGift />}
-              onClick={() => handleOptionSelect("gift")}
+              background="black"
+              color="white"
             />
             <Spacer />
             {/* Tweet Button */}
@@ -387,6 +395,11 @@ const GET_ALL_HAUNTS = gql`
         avatar
       }
       createdAt
+      likes {
+        id
+        userId
+        hauntId
+      }
     }
   }
 `;
