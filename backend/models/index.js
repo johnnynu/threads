@@ -60,6 +60,9 @@ db.User.sync({ alter: true })
   .then(() => {
     return db.Haunt.sync({ alter: true });
   })
+  .then(() => {
+    return db.Repost.sync({ alter: true });
+  })
   .catch((error) => {
     console.error("An error occurred while creating the tables:", error);
   });

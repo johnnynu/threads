@@ -37,7 +37,7 @@ import { BiBadgeCheck } from "react-icons/bi";
 import { RiGhost2Line } from "react-icons/ri";
 import ForYou from "./ForYou";
 import Following from "./Following";
-import ghostBrand from "../assets/ghostlogo1.jpeg";
+import ghostBrand from "../assets/ghostlogov2.jpeg";
 
 import { signOut } from "firebase/auth"; // import firebase auth signout
 import { auth } from "../firebase"; // import your auth instance
@@ -61,13 +61,16 @@ const HomePage = () => {
   const {
     loading: queryLoading,
     error: queryError,
-    data: queryData
+    data: queryData,
+    refetch
   } = useQuery(GET_ALL_HAUNTS);
+  console.log(queryData);
 
   const [createHaunt, { loading: createLoading }] = useMutation(CREATE_HAUNT, {
     onCompleted: () => {
       setIsRenderingHaunt(false);
-    }
+    },
+    refetchQueries: [{ query: GET_ALL_HAUNTS }]
   });
 
   const { data: subscriptionData } = useSubscription(HAUNT_CREATED);
@@ -329,6 +332,7 @@ const HomePage = () => {
             currentUserId={user.id}
             createLoading={createLoading || isRenderingHaunt}
             disableDelete={disableDelete}
+            refetchHaunts={refetch}
           />
         )}
         {tab === "following" && <Following />}
@@ -399,6 +403,22 @@ const GET_ALL_HAUNTS = gql`
         id
         userId
         hauntId
+      }
+      reposts {
+        id
+        userId
+        hauntId
+      }
+      replies {
+        id
+        content
+        user {
+          id
+          username
+          displayName
+          avatar
+        }
+        createdAt
       }
     }
   }

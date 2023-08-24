@@ -1,7 +1,7 @@
 const { Haunt } = require("../models");
 
-async function createHaunt({ id, userId, content }) {
-  const haunt = await Haunt.create({ id, userId, content });
+async function createHaunt({ id, userId, content, parentHauntId }) {
+  const haunt = await Haunt.create({ id, userId, content, parentHauntId });
   return haunt;
 }
 

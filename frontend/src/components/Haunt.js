@@ -20,14 +20,17 @@ import {
 } from "@chakra-ui/icons";
 import { formatDistanceToNow, set } from "date-fns";
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useSubscription, gql } from "@apollo/client";
 
 function Haunt({
   haunt,
   hauntLikes,
+  hauntReposts,
   currentUserId,
   createLoading,
-  disableDelete
+  disableDelete,
+  refetchHaunts
 }) {
   const createdAtDate = new Date(Number(haunt.createdAt));
   const timeDifference = formatDistanceToNow(createdAtDate);
@@ -36,8 +39,10 @@ function Haunt({
   const [isDeleted, setIsDeleted] = useState(false);
   const [newContent, setNewContent] = useState(haunt.content);
   const [userHasLiked, setUserHasLiked] = useState(false);
+  const [userHasReposted, setUserHasReposted] = useState(false);
 
   const [likes, setLikes] = useState(hauntLikes || []);
+  const [reposts, setReposts] = useState(hauntReposts || []);
 
   useEffect(() => {
     console.log("likes:", likes);
@@ -47,6 +52,13 @@ function Haunt({
     const existingLike = likes.find((like) => like.userId === currentUserId);
     setUserHasLiked(!!existingLike);
   }, [likes, currentUserId]);
+
+  useEffect(() => {
+    const existingRepost = reposts.find(
+      (repost) => repost.userId === currentUserId
+    );
+    setUserHasReposted(!!existingRepost);
+  }, [reposts, currentUserId]);
 
   const [editHaunt] = useMutation(EDIT_HAUNT, {
     refetchQueries: [{ query: GET_ALL_HAUNTS }]
@@ -63,8 +75,20 @@ function Haunt({
     }
   });
 
-  const [createLike] = useMutation(CREATE_LIKE);
-  const [deleteLike] = useMutation(DELETE_LIKE);
+  const [createLike] = useMutation(CREATE_LIKE, {
+    onCompleted: () => {
+      refetchHaunts();
+    }
+  });
+
+  const [deleteLike] = useMutation(DELETE_LIKE, {
+    onCompleted: () => {
+      refetchHaunts();
+    }
+  });
+
+  const [createRepost] = useMutation(CREATE_REPOST);
+  const [deleteRepost] = useMutation(DELETE_REPOST);
 
   useSubscription(LIKE_CREATED, {
     onSubscriptionData: ({ subscriptionData }) => {
@@ -83,6 +107,29 @@ function Haunt({
       const { hauntId, likeId } = subscriptionData.data.likeDeleted;
       if (hauntId === haunt.id) {
         setLikes((prevLikes) => prevLikes.filter((like) => like.id !== likeId));
+      }
+    }
+  });
+
+  useSubscription(REPOST_CREATED, {
+    onSubscriptionData: ({ subscriptionData }) => {
+      const { hauntId, repostId } = subscriptionData.data.repostCreated;
+      if (hauntId === haunt.id) {
+        setReposts((prevReposts) => [
+          ...prevReposts,
+          { id: repostId, userId: currentUserId }
+        ]);
+      }
+    }
+  });
+
+  useSubscription(REPOST_DELETED, {
+    onSubscriptionData: ({ subscriptionData }) => {
+      const { hauntId, repostId } = subscriptionData.data.repostDeleted;
+      if (hauntId === haunt.id) {
+        setReposts((prevReposts) =>
+          prevReposts.filter((repost) => repost.id !== repostId)
+        );
       }
     }
   });
@@ -115,6 +162,28 @@ function Haunt({
     }
   };
 
+  const handleRepost = async () => {
+    if (!currentUserId) {
+      // User is not logged in
+      alert("You must be logged in to repost a haunt!");
+      return;
+    }
+
+    const existingRepost = reposts.find(
+      (repost) => repost.userId === currentUserId
+    );
+
+    if (existingRepost) {
+      // User has already reposted this haunt, so we'll unrepost it
+      await deleteRepost({ variables: { id: existingRepost.id } });
+    } else {
+      // User has not reposted this haunt yet, so we'll repost it
+      await createRepost({ variables: { hauntId: haunt.id } });
+    }
+  };
+
+  console.log("Setting currentUserId in Link:", currentUserId);
+
   return (
     <Flex
       direction="row"
@@ -124,6 +193,7 @@ function Haunt({
       borderRadius="lg"
       marginBottom="20px"
       bg="black"
+      cursor="pointer"
     >
       <Avatar src={haunt.user.avatar} />
       <VStack align="start" spacing={1} ml={4} w="full">
@@ -160,23 +230,39 @@ function Haunt({
             onChange={(e) => setNewContent(e.target.value)}
           />
         ) : (
-          <Text>{haunt.content}</Text>
+          <Link
+            to={{
+              pathname: `/haunt/${haunt.id}`,
+              state: {
+                test: "test"
+              }
+            }}
+          >
+            <Text>{haunt.content}</Text>
+          </Link>
         )}
         <HStack spacing={4}>
-          <IconButton
-            aria-label="Reply"
-            icon={<ChatIcon />}
-            variant="outline"
-            size="sm"
-            color="white"
-          />
-          <IconButton
-            aria-label="Retweet"
-            icon={<RepeatIcon />}
-            variant="outline"
-            size="sm"
-            color="white"
-          />
+          <HStack spacing={1}>
+            <IconButton
+              aria-label="Reply"
+              icon={<ChatIcon />}
+              variant="outline"
+              size="sm"
+              color="white"
+            />
+            <Text>{haunt.replies ? haunt.replies.length : 0}</Text>
+          </HStack>
+          <HStack spacing={1}>
+            <IconButton
+              aria-label="Repost"
+              icon={<RepeatIcon />}
+              variant={userHasReposted ? "solid" : "outline"}
+              colorScheme={userHasReposted ? "green" : "white"}
+              size="sm"
+              onClick={handleRepost}
+            />
+            <Text>{reposts ? reposts.length : 0}</Text>
+          </HStack>
           <HStack spacing={1}>
             <IconButton
               aria-label="Like"
@@ -188,14 +274,6 @@ function Haunt({
             />
             <Text>{likes ? likes.length : 0}</Text>
           </HStack>
-
-          <IconButton
-            aria-label="Share"
-            icon={<AttachmentIcon />}
-            variant="outline"
-            size="sm"
-            color="white"
-          />
         </HStack>
       </VStack>
     </Flex>
@@ -253,6 +331,26 @@ const LIKE_DELETED = gql`
   }
 `;
 
+const REPOST_CREATED = gql`
+  subscription {
+    repostCreated {
+      hauntId
+      repostId
+      repostCount
+    }
+  }
+`;
+
+const REPOST_DELETED = gql`
+  subscription {
+    repostDeleted {
+      hauntId
+      repostId
+      repostCount
+    }
+  }
+`;
+
 const CREATE_LIKE = gql`
   mutation CreateLike($hauntId: String!) {
     createLike(hauntId: $hauntId) {
@@ -264,6 +362,20 @@ const CREATE_LIKE = gql`
 const DELETE_LIKE = gql`
   mutation DeleteLike($id: String!) {
     deleteLike(id: $id)
+  }
+`;
+
+const CREATE_REPOST = gql`
+  mutation CreateRepost($hauntId: String!) {
+    createRepost(hauntId: $hauntId) {
+      id
+    }
+  }
+`;
+
+const DELETE_REPOST = gql`
+  mutation DeleteRepost($id: String!) {
+    deleteRepost(id: $id)
   }
 `;
 

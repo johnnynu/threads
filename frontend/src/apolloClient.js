@@ -36,7 +36,6 @@ const wsLink = new GraphQLWsLink(
       const auth = getAuth();
       const user = auth.currentUser;
       const token = user ? await user.getIdToken(true) : null;
-      console.log("Connection Params:", token);
       return {
         authToken: token
       };

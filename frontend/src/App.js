@@ -4,6 +4,7 @@ import PrivateRoute from "./utility/PrivateRoute";
 import LandingPage from "./components/LandingPage";
 import ConfirmInfo from "./components/ConfirmInfo";
 import HomePage from "./components/HomePage";
+import DetailedHaunt from "./components/DetailedHaunt";
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
               </PrivateRoute>
             }
           />
+          <Route path="/haunt/:id" element={<DetailedHaunt />} />
         </Routes>
       </Router>
     </UserProvider>

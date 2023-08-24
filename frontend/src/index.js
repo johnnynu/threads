@@ -10,7 +10,7 @@ const theme = extendTheme({
   styles: {
     global: {
       body: {
-        backgroundColor: "#000000",
+        backgroundColor: "blackAlpha.900",
         color: "white" // You may want to set a suitable text color as well
       }
     }

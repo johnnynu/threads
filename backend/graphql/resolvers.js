@@ -5,7 +5,7 @@ const {
   updateUserById
 } = require("../utility/users");
 const { createHaunt, deleteHauntById } = require("../utility/haunts");
-const { User, Haunt, Like } = require("../models");
+const { User, Haunt, Like, Repost } = require("../models");
 const { PubSub } = require("graphql-subscriptions");
 const { v4: uuidv4 } = require("uuid");
 const pubsub = new PubSub();
@@ -14,6 +14,8 @@ const HAUNT_CREATED = "HAUNT_CREATED";
 const HAUNT_DELETED = "HAUNT_DELETED";
 const LIKE_CREATED = "LIKE_CREATED";
 const LIKE_DELETED = "LIKE_DELETED";
+const REPOST_CREATED = "REPOST_CREATED";
+const REPOST_DELETED = "REPOST_DELETED";
 
 const resolvers = {
   Subscription: {
@@ -32,6 +34,14 @@ const resolvers = {
     likeDeleted: {
       subscribe: () => pubsub.asyncIterator(["LIKE_DELETED"]),
       resolve: (payload) => payload.likeDeleted
+    },
+    repostCreated: {
+      subscribe: () => pubsub.asyncIterator(["REPOST_CREATED"]),
+      resolve: (payload) => payload.repostCreated
+    },
+    repostDeleted: {
+      subscribe: () => pubsub.asyncIterator(["REPOST_DELETED"]),
+      resolve: (payload) => payload.repostDeleted
     }
   },
   Mutation: {
@@ -71,7 +81,7 @@ const resolvers = {
       }
       return user;
     },
-    createHaunt: async (_, { userId, content }) => {
+    createHaunt: async (_, { userId, content, parentHauntId }) => {
       const user = await findUserById(userId);
       if (!user) {
         throw new Error("No user found with this ID");
@@ -86,7 +96,8 @@ const resolvers = {
       const haunt = await createHaunt({
         id,
         userId,
-        content
+        content,
+        parentHauntId
       });
 
       haunt.user = user;
@@ -153,6 +164,41 @@ const resolvers = {
         likeDeleted: { hauntId: like.hauntId, likeId: like.id, likeCount }
       });
       return true;
+    },
+    createRepost: async (_, { hauntId }, context) => {
+      const haunt = await Haunt.findByPk(hauntId);
+      if (!haunt) {
+        throw new Error("No haunt found with this ID");
+      }
+      const repost = await Repost.create({
+        userId: context.userId,
+        hauntId: hauntId
+      });
+      const repostCount = await Repost.count({ where: { hauntId } });
+      pubsub.publish(REPOST_CREATED, {
+        repostCreated: { hauntId, repostId: repost.id, repostCount }
+      });
+      return repost;
+    },
+    deleteRepost: async (_, { id }, context) => {
+      const repost = await Repost.findOne({
+        where: { id: id, userId: context.userId }
+      });
+      if (!repost) {
+        throw new Error("Repost not found or you're not the owner");
+      }
+      await repost.destroy();
+      const repostCount = await Repost.count({
+        where: { hauntId: repost.hauntId }
+      });
+      pubsub.publish(REPOST_DELETED, {
+        repostDeleted: {
+          hauntId: repost.hauntId,
+          repostId: repost.id,
+          repostCount
+        }
+      });
+      return true;
     }
   },
   Query: {
@@ -171,16 +217,21 @@ const resolvers = {
         return null;
       }
     },
-    haunt: (_, { id }) => Haunt.findByPk(id)
+    haunt: async (_, { id }) => await Haunt.findByPk(id)
   },
   User: {
     haunts: (user) => Haunt.findAll({ where: { userId: user.id } })
   },
-
   Haunt: {
     user: (haunt) => User.findByPk(haunt.userId),
     likes: async (haunt) => {
       return await Like.findAll({ where: { hauntId: haunt.id } });
+    },
+    reposts: async (haunt) => {
+      return await Repost.findAll({ where: { hauntId: haunt.id } });
+    },
+    replies: async (haunt) => {
+      return await Haunt.findAll({ where: { parentHauntId: haunt.id } });
     }
   }
 };

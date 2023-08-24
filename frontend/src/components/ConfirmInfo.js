@@ -119,7 +119,7 @@ const ConfirmInfo = () => {
                 backgroundColor={
                   formik.touched.username && formik.errors.username
                     ? "red.100"
-                    : "white"
+                    : "black"
                 }
                 pr="4.5rem"
               />

@@ -11,7 +11,7 @@ import {
   Text
 } from "@chakra-ui/react";
 import { FcGoogle } from "react-icons/fc";
-import ghostBrand from "../assets/ghostlogo1.jpeg";
+import ghostBrand from "../assets/ghostlogov2.jpeg";
 import { auth } from "../firebase";
 import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
@@ -73,7 +73,7 @@ const LandingPage = () => {
         fontSize={{ base: "3xl", md: "4xl" }}
         fontWeight="bold"
         lineHeight={{ base: "shorter", md: "none" }}
-        color="gray.900"
+        color="white"
         _dark={{ color: "gray.200" }}
         letterSpacing={{ base: "normal", md: "tight" }}
       >
@@ -102,7 +102,6 @@ const LandingPage = () => {
           <Button
             py={2}
             w="full"
-            colorScheme="whiteAlpha"
             color="black"
             shadow="md"
             onClick={handleSignInWithGoogle}
