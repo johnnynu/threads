@@ -1,1 +1,1 @@
-# ghost
+# threads - twitter like application
